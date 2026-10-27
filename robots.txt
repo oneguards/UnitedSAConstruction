@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /.netlify/
+Sitemap: https://melodious-concha-88f352.netlify.app/sitemap.xml
