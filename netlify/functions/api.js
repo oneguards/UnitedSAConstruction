@@ -1,8 +1,8 @@
 const { createClient } = require('@supabase/supabase-js');
 const URL=process.env.SUPABASE_URL, ANON=process.env.SUPABASE_ANON_KEY, SECRET=process.env.SUPABASE_SERVICE_ROLE_KEY;
 const json=(status,data)=>({statusCode:status,headers:{'Content-Type':'application/json','Cache-Control':'no-store','Access-Control-Allow-Origin':'same-origin'},body:JSON.stringify(data)});
-const collections=['projects','services','social_links','licenses'];
-const fields={projects:['title','description','service','location','image_url','published','sort_order'],services:['name','description','image_url','published','sort_order'],social_links:['label','url','published','sort_order'],licenses:['license_number','license_type','state','holder','expires_on','published','sort_order']};
+const collections=['projects','services','social_links','licenses','brands'];
+const fields={projects:['title','description','service','location','image_url','published','sort_order'],services:['name','description','image_url','show_card','published','sort_order'],social_links:['label','platform','url','published','sort_order'],brands:['name','description','image_url','url','published','sort_order'],licenses:['license_number','license_type','state','holder','expires_on','published','sort_order']};
 const clean=(name,data)=>Object.fromEntries(fields[name].filter(k=>Object.hasOwn(data,k)).map(k=>[k,data[k]]));
 exports.handler=async(event)=>{
  try {
@@ -49,6 +49,9 @@ exports.handler=async(event)=>{
   if(!collections.includes(name))return json(400,{error:'Invalid collection'});
   if(method==='POST'||method==='PATCH'){
     const payload=clean(name,body);
+    if(name==='licenses'&&payload.expires_on==='')payload.expires_on=null;
+    for(const key of ['image_url','url']){if(payload[key]&&!/^https:\/\//i.test(payload[key]))return json(400,{error:'Links and images must use https://'});}
+    if(name==='social_links'&&payload.platform&&!['custom','facebook','google_maps','google_reviews'].includes(payload.platform))return json(400,{error:'Invalid link placement'});
     if(!Object.keys(payload).length)return json(400,{error:'No valid fields'});
     if(name==='social_links'&&payload.url&&!/^https:\/\//i.test(payload.url))return json(400,{error:'Social links must use https://'});
     if(name==='projects'&&payload.image_url&&!/^https:\/\//i.test(payload.image_url))return json(400,{error:'Project image URL must use https://'});
