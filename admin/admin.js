@@ -1,6 +1,7 @@
 const cfg = window.UNITED_ADMIN_CONFIG;
 const status = document.getElementById('status'), panel = document.getElementById('panel');
 const sections = {
+  reports:{title:'Website Reports',description:'See how people find and explore your website.',singular:'report'},
   promotions: {title:'Promotions',description:'Turn an offer on when you’re ready. Lowest display order wins if several are on.',singular:'promotion'},
   leads: {title:'Leads Inbox',description:'Every conversation starts here.',singular:'request'},
   projects: {title:'Projects',description:'A home for the work you’re proud of.',singular:'project'},
@@ -24,9 +25,9 @@ const safeUrl=value=>{try{const u=new URL(value);return u.protocol==='https:'?u.
 const dateLabel=value=>{if(!value)return '';const d=new Date(value.length===10?value+'T12:00:00Z':value);return Number.isNaN(d.getTime())?'':d.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric',timeZone:'UTC'});};
 const photosFor=item=>[...new Set([...(Array.isArray(item.image_urls)?item.image_urls:[]),item.image_url].filter(x=>safeUrl(x)))];
 function msg(text,bad=false){clearTimeout(messageTimer);status.textContent=text;status.className='toast'+(bad?' error':'');status.hidden=!text;if(text&&!bad)messageTimer=setTimeout(()=>{status.hidden=true;},5000);}
-async function api(collection,method='GET',body){
+async function api(collection,method='GET',body,params={}){
   if(!session)throw Error('Please sign in again.');
-  const response=await fetch('/.netlify/functions/api?collection='+encodeURIComponent(collection),{method,headers:{'Content-Type':'application/json',Authorization:'Bearer '+session.access_token},body:body?JSON.stringify(body):undefined});
+  const response=await fetch('/.netlify/functions/api?collection='+encodeURIComponent(collection)+'&'+new URLSearchParams(params),{method,headers:{'Content-Type':'application/json',Authorization:'Bearer '+session.access_token},body:body?JSON.stringify(body):undefined});
   const data=await response.json();if(!response.ok)throw Error(data.error||'Request failed. Please try again.');return data;
 }
 function setLogin(on){document.getElementById('login').hidden=on;document.getElementById('dashboard').hidden=!on;document.getElementById('logout').hidden=!on;document.getElementById('account-email').textContent=session?.user?.email||'United SA Construction';}
@@ -51,6 +52,8 @@ document.getElementById('add-record').onclick=()=>edit(null);
 async function load(){
   const version=++loadVersion;const section=sections[tab];document.getElementById('page-title').textContent=section.title;document.getElementById('breadcrumb').textContent=section.title;document.getElementById('page-description').textContent=section.description;
   document.querySelectorAll('[data-tab]').forEach(b=>{b.classList.toggle('active',b.dataset.tab===tab);if(b.dataset.tab===tab)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
+  document.querySelector('.content-toolbar').hidden=tab==='reports';
+  if(tab==='reports'){document.getElementById('summary').replaceChildren();await window.UnitedReports.mount({api,panel,summary:document.getElementById('summary'),active:()=>version===loadVersion&&!!session});return;}
   const add=document.getElementById('add-record');add.hidden=tab==='leads';add.textContent='＋ Add '+section.singular;
   const filter=document.getElementById('filter');filter.replaceChildren(new Option('All '+(tab==='leads'?'requests':'records'),'all'));
   for(const value of tab==='leads'?['new','contacted','quoted','won','lost']:['published','hidden'])filter.add(new Option(value[0].toUpperCase()+value.slice(1),value));
