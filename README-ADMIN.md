@@ -5,9 +5,10 @@ The dashboard manages customer leads, services, projects, social and Google link
 ## Existing project rollout
 
 1. `supabase/connect-existing-content.sql` adds the Brands table, service card visibility, and link placement. This schema change has already been applied to the existing project; do not rerun it.
-2. Merge/deploy the connected content renderer and API through the existing GitHub/Netlify integration.
-3. Run `supabase/import-existing-content.sql` to import the original eight services (six cards plus two estimate-only choices), six projects, one license, three links, and four brands. The import uses stable IDs and does not overwrite later edits when rerun.
-4. Refresh `/admin/` and verify the existing records in each tab. Edit, publish/unpublish, and reorder them as needed. Updates appear on the next public page load.
+2. `supabase/project-photos.sql` adds project photo arrays, completion dates, and the public project-photo bucket. This additive change has also been applied to the existing project; do not rerun it.
+3. Merge/deploy the connected content renderer and API through the existing GitHub/Netlify integration.
+4. Run `supabase/import-existing-content.sql` to import the original eight services (six cards plus two estimate-only choices), six projects, one license, three links, and four brands. The import uses stable IDs and does not overwrite later edits when rerun.
+5. Refresh `/admin/` and verify the existing records in each tab. Edit, publish/unpublish, and reorder them as needed. Updates appear on the next public page load.
 
 The original public content snapshot is in `supabase/existing-content.json`. The import is explicit and never runs automatically at deploy time.
 
@@ -24,7 +25,7 @@ RLS is enabled on all content tables, `leads`, and `admin_users`. Browser roles 
 ## Content behavior
 
 - Services: edit name, description, image, order, visibility, and whether the service has a card. Published services populate the estimate dropdown and footer; service cards appear on Home and Services.
-- Projects: existing gallery records are editable; images use HTTPS URLs, including existing website assets. Direct file uploads are not included.
+- Projects: edit the description and completion date, upload up to 30 photos, reorder by selecting a cover, or add HTTPS image links. Direct uploads support JPG, PNG, WebP, and AVIF up to 10 MB per file. Images upload to the public `project-photos` bucket using a server-issued signed upload token, available only after session and administrator authorization. No direct Storage write policy is granted to browser roles. Public portfolio images are readable by anyone with their URL. Removing a photo from a project removes its website reference; it does not permanently delete the Storage file. Avoid uploading private documents as portfolio photos.
 - Links: choose Facebook, Google Maps, Google Reviews, or Custom placement. Google Maps updates the contact link; Google Reviews updates the review links throughout the site. All published links appear in the footer.
 - Licenses: updates apply to the footer, About, and Contact licensing sections. Clearing an expiration date is supported. Verify credentials before changing public claims.
 - Brands: edit the name, product description, optional logo image URL, optional website link, visibility, and order on Home and Services. Manufacturer certification is not implied.
@@ -34,3 +35,7 @@ RLS is enabled on all content tables, `leads`, and `admin_users`. Browser roles 
 ## Verification
 
 Run `npm ci && npm test`. Tests cover existing content counts, edits, shared links, empty published collections, outage fallback, dashboard editors for all five content collections, and administrator authorization on brand writes. The tests use simulated transport and sessions; a real administrator should also verify editing in the deployed dashboard.
+
+## Dashboard design
+
+The dashboard has a responsive sidebar, mobile section navigation, searchable/filterable records, collection summaries, and a focused editing drawer. The sign-in screen supports password visibility and inline errors. All editing fields have labels; focus indicators, reduced motion, and native modal keyboard behavior are supported.
