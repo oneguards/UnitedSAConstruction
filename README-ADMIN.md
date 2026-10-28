@@ -45,3 +45,11 @@ The dashboard has a responsive sidebar, mobile section navigation, searchable/fi
 The homepage features the latest published project with completion dates first (newest date first). If no projects have dates, it uses the latest created record, with display order as a tie-breaker. Its cover, title, and description link to the project viewer; arrows and swipes browse additional photos.
 
 Our Work displays every published project as a card. The cover, title, description, and View project link all open a shareable `/our-work#project=ID` viewer. Desktop shows a contained large image, thumbnail chooser, and project details in one screen. Mobile uses a swipeable image track, horizontal thumbnails, and vertically scrollable details. Escape/Close and browser Back return to the gallery. Projects without photos or completion dates are supported.
+
+### Homepage promotions
+
+Open **Promotions → Add promotion**. Enter a headline and message, choose **Homepage top banner**, **Homepage popup**, or **Banner and popup**, and optionally add button text plus a complete HTTPS link (for example `https://unitedsaconstruction.com/contact#estimate`). Save it as a draft or enable **Promotion turned on**. Cards also have quick **Turn on / Turn off** buttons. Changes appear on the next homepage load without redeploying.
+
+New offers default off. If several are on, the offer with the lowest display order wins (ties: newest created, then ID). One campaign appears at a time. Popups wait briefly and avoid interrupting an active form or dialog. Close/Escape dismisses them; each popup is shown once per browser tab session. Editing its copy or placement resets dismissal. The banner can be dismissed separately. No offers are shown on API failure. Only the homepage loads promotions.
+
+`supabase/promotions.sql` adds the service-only, RLS-protected table; the backend only returns published promotions publicly. No promotion content is seeded or activated. Merge/deploy the current PR before using this section.
