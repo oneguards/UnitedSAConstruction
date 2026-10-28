@@ -1,22 +1,36 @@
-# United SA Construction — V25 website + admin starter
+# United SA Construction — website administration
 
-This is a real starter implementation, **not yet a connected live backend**. Existing website stays available if the backend is not configured.
+The dashboard manages customer leads, services, projects, social and Google links, licenses, and brands. Public pages read the same published database records that administrators edit.
 
-## Setup
-1. Create a Supabase project and run `supabase/schema.sql` in its SQL Editor **once**. Do not rerun the seed inserts without checking for duplicates.
-2. In Supabase Authentication > Users, create the owner's admin account (disable public sign-ups in Authentication settings). Copy the user's UUID and execute `insert into public.admin_users(user_id) values ('UUID');` in SQL Editor.
-3. Copy the Supabase Project URL and anon/publishable key into `admin/config.js` (these are public client values). **Never put service_role key in frontend code.**
-4. In Netlify > Project configuration > Environment variables, set `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` (secret). Redeploy.
-5. Deploy via Netlify CLI (`npm install && npx netlify deploy --prod --dir=. --functions=netlify/functions`) or Git integration. **Manual folder drag-and-drop may not deploy/build functions**; use CLI/Git for this version.
-6. Open `/admin/`, sign in, and manage content. Test a form submission and confirm it appears in Leads Inbox.
+## Existing project rollout
 
-## Scope and cautions
-- Supports project records with externally hosted HTTPS image URLs; direct photo uploads and image resizing are a **next phase**.
-- New services appear in the managed services section on Services page and estimate dropdown; existing static service cards remain as designed.
-- New projects appear on Our Work; existing gallery photos remain.
-- Social links and license footer update dynamically after backend setup; existing static footer is fallback if offline.
-- Lead records are saved in Supabase and appear in admin; **no automatic email/SMS notifications yet**.
-- Add CAPTCHA/rate limiting, spam protection, privacy policy, and email notifications before high-volume production use.
-- `admin/` is not protected by obscurity; data access is restricted server-side to admin_users. Never publish service role credentials.
-- License information supplied by client; verify before publishing.
-- Current site uses public CDN for admin Supabase client.
+1. `supabase/connect-existing-content.sql` adds the Brands table, service card visibility, and link placement. This schema change has already been applied to the existing project; do not rerun it.
+2. Merge/deploy the connected content renderer and API through the existing GitHub/Netlify integration.
+3. Run `supabase/import-existing-content.sql` to import the original eight services (six cards plus two estimate-only choices), six projects, one license, three links, and four brands. The import uses stable IDs and does not overwrite later edits when rerun.
+4. Refresh `/admin/` and verify the existing records in each tab. Edit, publish/unpublish, and reorder them as needed. Updates appear on the next public page load.
+
+The original public content snapshot is in `supabase/existing-content.json`. The import is explicit and never runs automatically at deploy time.
+
+## New empty database only
+
+Run `supabase/schema.sql` once, then the content import. Enable the owner's existing Auth account by adding its UUID to `admin_users` only after the owner approves that account. Disable public signups in Supabase Authentication settings.
+
+## Access and deployment
+
+Set `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` in the existing Netlify project. The server credential must be secret, available to Functions in Production, and never put into client files or GitHub. Redeploy after changing values. `admin/config.js` contains only the public URL and publishable key.
+
+RLS is enabled on all content tables, `leads`, and `admin_users`. Browser roles have no direct table privileges; the Netlify function verifies each session and checks `admin_users` for every private request. Only published content is returned by the public endpoints. Anonymous lead submission is server-side. Authentication alone does not grant administrator access.
+
+## Content behavior
+
+- Services: edit name, description, image, order, visibility, and whether the service has a card. Published services populate the estimate dropdown and footer; service cards appear on Home and Services.
+- Projects: existing gallery records are editable; images use HTTPS URLs, including existing website assets. Direct file uploads are not included.
+- Links: choose Facebook, Google Maps, Google Reviews, or Custom placement. Google Maps updates the contact link; Google Reviews updates the review links throughout the site. All published links appear in the footer.
+- Licenses: updates apply to the footer, About, and Contact licensing sections. Clearing an expiration date is supported. Verify credentials before changing public claims.
+- Brands: edit the name, product description, optional logo image URL, optional website link, visibility, and order on Home and Services. Manufacturer certification is not implied.
+- If the content API is unavailable, the original static content remains as a fallback. A successful empty response clears the section, so unpublishing all records is respected.
+- Leads are stored in Supabase; email/SMS notifications are not configured.
+
+## Verification
+
+Run `npm ci && npm test`. Tests cover existing content counts, edits, shared links, empty published collections, outage fallback, dashboard editors for all five content collections, and administrator authorization on brand writes. The tests use simulated transport and sessions; a real administrator should also verify editing in the deployed dashboard.
