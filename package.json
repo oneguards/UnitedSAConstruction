@@ -4,5 +4,11 @@
   "version": "1.0.0",
   "dependencies": {
     "@supabase/supabase-js": "^2.49.0"
+  },
+  "scripts": {
+    "test": "node tests/content.test.cjs"
+  },
+  "devDependencies": {
+    "jsdom": "30.1.3"
   }
 }
