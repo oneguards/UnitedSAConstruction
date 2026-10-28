@@ -7,7 +7,7 @@ const tick=()=>new Promise(r=>setTimeout(r,0));
 async function page(name,data=seed,fail=false){
  const dom=new JSDOM(fs.readFileSync(root+name+'.html','utf8'),{url:'https://unitedsaconstruction.com/'+name,runScripts:'outside-only'});
  dom.window.fetch=async url=>({ok:!fail,json:async()=>({items:data[new URL(url,'https://unitedsaconstruction.com').searchParams.get('collection')]||[]})});
- dom.window.console.warn=()=>{};dom.window.eval(source);await tick();return dom;
+ dom.window.console.warn=()=>{};dom.window.eval(fs.readFileSync(root+'assets/projects.js','utf8'));dom.window.eval(source);await tick();return dom;
 }
 (async()=>{
  for(const name of ['index','services']){
@@ -19,7 +19,7 @@ async function page(name,data=seed,fail=false){
  const edited=structuredClone(seed);edited.services[0].name='Edited roofing';edited.projects[0].title='Edited project';edited.projects[0].image_urls=['https://example.com/cover.jpg','https://example.com/detail.jpg'];edited.projects[0].image_url='https://example.com/cover.jpg';edited.projects[0].completed_on='2026-10-01';edited.licenses[0].license_number='EDIT-1';edited.brands[0].name='Edited brand';edited.social_links[1].url='https://example.com/maps';edited.social_links[2].url='https://example.com/reviews';
  d=await page('index',edited);assert.match(d.window.document.querySelector('#cards h3').textContent,/Edited roofing/);assert.match(d.window.document.querySelector('.brand-tile').textContent,/Edited brand/);assert.equal(d.window.document.querySelector('[data-social-platform="google_reviews"]').href,'https://example.com/reviews');d.window.close();
  d=await page('contact',edited);assert.match(d.window.document.querySelector('.license-credentials').textContent,/EDIT-1/);assert.equal(d.window.document.querySelector('[data-social-platform="google_maps"]').href,'https://example.com/maps');d.window.close();
- d=await page('our-work',edited);assert.match(d.window.document.querySelector('#projects figcaption').textContent,/Edited project/);assert.equal(d.window.document.querySelectorAll('.project-photos a').length,2);assert.equal(d.window.document.querySelector('.project-date').dateTime,'2026-10-01');d.window.close();
+ d=await page('our-work',edited);assert.match(d.window.document.querySelector('#projects figcaption').textContent,/Edited project/);assert.equal(d.window.document.querySelectorAll('.portfolio-cover').length,6);assert.match(d.window.document.querySelector('.portfolio-cover').getAttribute('href'),/our-work#project=/);assert.equal(d.window.document.querySelector('.project-date').dateTime,'2026-10-01');d.window.close();
  const empty={services:[],projects:[],licenses:[],social_links:[],brands:[]};
  d=await page('index',empty);assert.equal(d.window.document.querySelectorAll('#cards article').length,0);assert.equal(d.window.document.querySelectorAll('.brand-tile').length,0);assert(d.window.document.querySelector('[data-social-platform]').hidden);assert.equal(d.window.document.querySelectorAll('footer .social-links a').length,0);d.window.close();
  d=await page('contact',empty);assert(d.window.document.querySelector('.license-credentials').hidden);assert.equal(d.window.document.querySelectorAll('#service option').length,1);d.window.close();
