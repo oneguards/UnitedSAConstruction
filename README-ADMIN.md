@@ -39,3 +39,9 @@ Run `npm ci && npm test`. Tests cover existing content counts, edits, shared lin
 ## Dashboard design
 
 The dashboard has a responsive sidebar, mobile section navigation, searchable/filterable records, collection summaries, and a focused editing drawer. The sign-in screen supports password visibility and inline errors. All editing fields have labels; focus indicators, reduced motion, and native modal keyboard behavior are supported.
+
+## Public portfolio
+
+The homepage features the latest published project with completion dates first (newest date first). If no projects have dates, it uses the latest created record, with display order as a tie-breaker. Its cover, title, and description link to the project viewer; arrows and swipes browse additional photos.
+
+Our Work displays every published project as a card. The cover, title, description, and View project link all open a shareable `/our-work#project=ID` viewer. Desktop shows a contained large image, thumbnail chooser, and project details in one screen. Mobile uses a swipeable image track, horizontal thumbnails, and vertically scrollable details. Escape/Close and browser Back return to the gallery. Projects without photos or completion dates are supported.
