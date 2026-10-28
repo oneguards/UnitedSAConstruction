@@ -1,6 +1,7 @@
 const cfg = window.UNITED_ADMIN_CONFIG;
 const status = document.getElementById('status'), panel = document.getElementById('panel');
 const sections = {
+  promotions: {title:'Promotions',description:'Turn an offer on when you’re ready. Lowest display order wins if several are on.',singular:'promotion'},
   leads: {title:'Leads Inbox',description:'Every conversation starts here.',singular:'request'},
   projects: {title:'Projects',description:'A home for the work you’re proud of.',singular:'project'},
   services: {title:'Services',description:'Show homeowners what your team does best.',singular:'service'},
@@ -9,13 +10,14 @@ const sections = {
   brands: {title:'Brands',description:'The materials and makers behind your work.',singular:'brand'}
 };
 const columns = {
+  promotions:['title','description','placement','button_label','url','published','sort_order'],
   projects:['title','description','service','location','completed_on','published','sort_order'],
   services:['name','description','image_url','show_card','published','sort_order'],
   social_links:['label','platform','url','published','sort_order'],
   licenses:['license_number','license_type','state','holder','expires_on','published','sort_order'],
   brands:['name','description','image_url','url','published','sort_order']
 };
-const labels = {title:'Project name',name:'Name',description:'Description',service:'Service / type of work',location:'City or location',completed_on:'Completed on',image_url:'Image URL',show_card:'Show service card',published:'Published on website',sort_order:'Display order',label:'Link label',platform:'Link placement',url:'Website link',license_number:'License number',license_type:'License type',state:'State',holder:'License holder',expires_on:'Expiration date'};
+const labels = {placement:'Show offer as',button_label:'Button text',title:'Project name',name:'Name',description:'Description',service:'Service / type of work',location:'City or location',completed_on:'Completed on',image_url:'Image URL',show_card:'Show service card',published:'Published on website',sort_order:'Display order',label:'Link label',platform:'Link placement',url:'Website link',license_number:'License number',license_type:'License type',state:'State',holder:'License holder',expires_on:'Expiration date'};
 let client, session, tab='leads', items=[], loadVersion=0, messageTimer;
 const el=(tag,text,className)=>{const x=document.createElement(tag);if(text!=null)x.textContent=text;if(className)x.className=className;return x;};
 const safeUrl=value=>{try{const u=new URL(value);return u.protocol==='https:'?u.href:'';}catch{return '';}};
@@ -74,10 +76,10 @@ function contentCard(item,index){
   const card=el('article',null,'record');const images=tab==='projects'?photosFor(item):[item.image_url].filter(x=>safeUrl(x));
   if(images.length){const visual=el('div',null,'record-visual');const img=el('img');img.src=images[0];img.alt=item.title||item.name||'';img.loading='lazy';visual.append(img);if(tab==='projects')visual.append(el('span',images.length+' photo'+(images.length===1?'':'s'),'photo-count'));card.append(visual);}
   const body=el('div',null,'record-body'),top=el('div',null,'record-top');top.append(el('h3',item.title||item.name||item.label||item.license_number),badge(item.published?'published':'hidden'));body.append(top);
-  const meta=tab==='projects'?[item.service,item.location,item.completed_on?'Completed '+dateLabel(item.completed_on):'']:tab==='licenses'?[item.state,item.holder,item.expires_on?'Expires '+dateLabel(item.expires_on):'']:tab==='social_links'?[item.platform?.replaceAll('_',' ')]:[];
+  const meta=tab==='projects'?[item.service,item.location,item.completed_on?'Completed '+dateLabel(item.completed_on):'']:tab==='licenses'?[item.state,item.holder,item.expires_on?'Expires '+dateLabel(item.expires_on):'']:tab==='social_links'?[item.platform?.replaceAll('_',' ')]:tab==='promotions'?[{banner:'Top banner',popup:'Popup',both:'Banner and popup'}[item.placement]]:[];
   if(meta.filter(Boolean).length)body.append(el('p',meta.filter(Boolean).join(' · '),'meta'));
   body.append(el('p',item.description||item.url||item.license_type||'','detail'));
-  const actions=el('div',null,'record-actions'),buttons=el('div');buttons.style.display='flex';buttons.style.gap='7px';const editButton=el('button','Edit','secondary');editButton.onclick=()=>edit(item);const remove=el('button','Delete','danger');remove.onclick=async()=>{if(!confirm('Permanently delete this '+sections[tab].singular+'? You can unpublish it instead to keep a draft.'))return;remove.disabled=true;try{await api(tab,'DELETE',{id:item.id});await load();msg('Item deleted.');}catch(error){msg(error.message,true);remove.disabled=false;}};buttons.append(editButton,remove);actions.append(buttons,el('span',String(index+1).padStart(2,'0'),'record-number'));body.append(actions);card.append(body);return card;
+  const actions=el('div',null,'record-actions'),buttons=el('div');buttons.style.display='flex';buttons.style.gap='7px';const editButton=el('button','Edit','secondary');editButton.onclick=()=>edit(item);const remove=el('button','Delete','danger');remove.onclick=async()=>{if(!confirm('Permanently delete this '+sections[tab].singular+'? You can unpublish it instead to keep a draft.'))return;remove.disabled=true;try{await api(tab,'DELETE',{id:item.id});await load();msg('Item deleted.');}catch(error){msg(error.message,true);remove.disabled=false;}};if(tab==='promotions'){const toggle=el('button',item.published?'Turn off':'Turn on','secondary');toggle.setAttribute('aria-label',(item.published?'Turn off ':'Turn on ')+item.title);toggle.onclick=async()=>{toggle.disabled=true;try{await api('promotions','PATCH',{id:item.id,published:!item.published});await load();msg(item.published?'Promotion turned off.':'Promotion turned on.');}catch(error){msg(error.message,true);toggle.disabled=false;}};buttons.append(toggle);}buttons.append(editButton,remove);actions.append(buttons,el('span',String(index+1).padStart(2,'0'),'record-number'));body.append(actions);card.append(body);return card;
 }
 function leadCard(item){
   const card=el('article',null,'lead-record'),header=el('div',null,'lead-header'),title=el('div',null,'lead-title');title.append(el('h3',item.name),el('div',[item.service,dateLabel(item.created_at)].filter(Boolean).join(' · '),'meta'));header.append(el('span',item.name.slice(0,2).toUpperCase(),'avatar'),title,badge(item.status));card.append(header);
@@ -89,13 +91,14 @@ function closeEditor(){if(dialog.open){if(dialog.close)dialog.close();else dialo
 dialog.addEventListener('cancel',event=>{event.preventDefault();closeEditor();});
 function edit(item){
   closeEditor();previousFocus=document.activeElement;const editingTab=tab;const form=el('form');form.id='editor';const head=el('div',null,'editor-header'),titleWrap=el('div');titleWrap.append(el('span',sections[tab].title.toUpperCase(),'eyebrow'));const title=el('h2',(item?'Edit ':'New ')+sections[tab].singular);title.id='editor-title';titleWrap.append(title);const close=el('button','×','close-editor');close.type='button';close.setAttribute('aria-label','Close editor');close.onclick=closeEditor;head.append(titleWrap,close);form.append(head);
-  const fields=el('div',null,'editor-fields'),inputs={};const required={projects:['title'],services:['name'],social_links:['label','url'],licenses:['license_number'],brands:['name']};
+  const fields=el('div',null,'editor-fields'),inputs={};const required={promotions:['title'],projects:['title'],services:['name'],social_links:['label','url'],licenses:['license_number'],brands:['name']};
   for(const key of columns[tab]){
-    const wide=['title','name','description','image_url','url','license_type'].includes(key);const label=el('label',labels[key]||key,'field'+(wide?' wide':'')+(['published','show_card'].includes(key)?' toggle':''));let input;
-    if(key==='platform'){input=el('select');for(const value of ['custom','facebook','google_maps','google_reviews'])input.add(new Option(value.replaceAll('_',' '),value));input.value=item?.[key]||'custom';}
+    const wide=['title','name','description','image_url','url','license_type'].includes(key);const label=el('label',(tab==='promotions'&&key==='title'?'Offer headline':tab==='promotions'&&key==='published'?'Promotion turned on':labels[key]||key),'field'+(wide?' wide':'')+(['published','show_card'].includes(key)?' toggle':''));let input;
+    if(key==='placement'){input=el('select');for(const [value,text] of [['banner','Homepage top banner'],['popup','Homepage popup'],['both','Banner and popup']])input.add(new Option(text,value));input.value=item?.[key]||'banner';}
+    else if(key==='platform'){input=el('select');for(const value of ['custom','facebook','google_maps','google_reviews'])input.add(new Option(value.replaceAll('_',' '),value));input.value=item?.[key]||'custom';}
     else if(key==='description'){input=el('textarea');input.value=item?.[key]||'';input.placeholder=tab==='projects'?'A short story about the work, materials, and finished result.':'A little detail goes a long way.';input.maxLength=5000;}
     else{input=el('input');input.type=['published','show_card'].includes(key)?'checkbox':key==='sort_order'?'number':['completed_on','expires_on'].includes(key)?'date':['image_url','url'].includes(key)?'url':'text';if(input.type==='checkbox')input.checked=item?.[key]??(key==='show_card');else input.value=item?.[key]??(key==='sort_order'?0:'');if(input.type==='url')input.placeholder='https://';}
-    input.name=key;input.required=(required[tab]||[]).includes(key);label.append(input);if(key==='completed_on')label.append(el('small','Optional. Shown with the project on your website.'));if(key==='sort_order')label.append(el('small','Lower numbers appear first.'));fields.append(label);inputs[key]=input;
+    if(tab==='promotions'&&['title','description','button_label'].includes(key))input.maxLength={title:120,description:600,button_label:60}[key];input.name=key;input.required=(required[tab]||[]).includes(key);label.append(input);if(key==='completed_on')label.append(el('small','Optional. Shown with the project on your website.'));if(key==='sort_order')label.append(el('small','Lower numbers appear first.'));fields.append(label);inputs[key]=input;
   }
   const footer=el('div',null,'editor-footer'),cancel=el('button','Cancel','secondary'),save=el('button','Save changes','primary');cancel.type='button';cancel.onclick=closeEditor;save.type='submit';footer.append(cancel,save);const errorEl=el('p',null,'editor-error');errorEl.setAttribute('role','alert');errorEl.hidden=true;
   let photos=editingTab==='projects'?photosFor(item||{}):[],uploading=false;
