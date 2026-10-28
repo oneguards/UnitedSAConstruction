@@ -1,0 +1,192 @@
+{
+  "services": [
+    {
+      "name": "Roofing",
+      "description": "Roof repairs, replacements and weather protection for your home.",
+      "image_url": "https://unitedsaconstruction.com/assets/roof-sheathing.jpg",
+      "show_card": true,
+      "published": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Siding",
+      "description": "Exterior siding preparation, installation and replacement.",
+      "image_url": "https://unitedsaconstruction.com/assets/siding-wrap.jpg",
+      "show_card": true,
+      "published": true,
+      "sort_order": 1
+    },
+    {
+      "name": "Gutters",
+      "description": "Gutter installation and replacement for proper water drainage.",
+      "image_url": "https://unitedsaconstruction.com/assets/gutters-service.jpg",
+      "show_card": true,
+      "published": true,
+      "sort_order": 2
+    },
+    {
+      "name": "Decks",
+      "description": "Outdoor living spaces, decking and exterior stairs.",
+      "image_url": "https://unitedsaconstruction.com/assets/wood-deck.jpg",
+      "show_card": true,
+      "published": true,
+      "sort_order": 3
+    },
+    {
+      "name": "Windows",
+      "description": "Residential window installation and replacement.",
+      "image_url": "https://unitedsaconstruction.com/assets/windows-service.jpg",
+      "show_card": true,
+      "published": true,
+      "sort_order": 4
+    },
+    {
+      "name": "Masonry",
+      "description": "Exterior masonry improvements and repairs.",
+      "image_url": "https://unitedsaconstruction.com/assets/stair-railing.jpg",
+      "show_card": true,
+      "published": true,
+      "sort_order": 5
+    },
+    {
+      "name": "Storm Damage",
+      "description": "",
+      "image_url": "",
+      "show_card": false,
+      "published": true,
+      "sort_order": 6
+    },
+    {
+      "name": "Exterior Repairs",
+      "description": "",
+      "image_url": "",
+      "show_card": false,
+      "published": true,
+      "sort_order": 7
+    }
+  ],
+  "projects": [
+    {
+      "title": "Roof Sheathing & Preparation",
+      "description": "Roof decking and sheathing work",
+      "service": "",
+      "location": "",
+      "image_url": "https://unitedsaconstruction.com/assets/roof-sheathing.jpg",
+      "published": true,
+      "sort_order": 0
+    },
+    {
+      "title": "Roof Tarping & Protection",
+      "description": "Temporary roof tarp",
+      "service": "",
+      "location": "",
+      "image_url": "https://unitedsaconstruction.com/assets/roof-tarp.jpg",
+      "published": true,
+      "sort_order": 1
+    },
+    {
+      "title": "Siding & Exterior Preparation",
+      "description": "House wrap and exterior siding preparation",
+      "service": "",
+      "location": "",
+      "image_url": "https://unitedsaconstruction.com/assets/siding-wrap.jpg",
+      "published": true,
+      "sort_order": 2
+    },
+    {
+      "title": "Elevated Residential Deck",
+      "description": "New England home with elevated deck",
+      "service": "",
+      "location": "",
+      "image_url": "https://unitedsaconstruction.com/assets/project-01-3.jpg",
+      "published": true,
+      "sort_order": 3
+    },
+    {
+      "title": "Wood Deck & Stairs",
+      "description": "Wood deck and stairs",
+      "service": "",
+      "location": "",
+      "image_url": "https://unitedsaconstruction.com/assets/wood-deck.jpg",
+      "published": true,
+      "sort_order": 4
+    },
+    {
+      "title": "Exterior Stair Railing",
+      "description": "Exterior railing at concrete steps",
+      "service": "",
+      "location": "",
+      "image_url": "https://unitedsaconstruction.com/assets/stair-railing.jpg",
+      "published": true,
+      "sort_order": 5
+    }
+  ],
+  "licenses": [
+    {
+      "license_number": "GC-42968",
+      "license_type": "Construction Supervisor / General Contractor License",
+      "state": "Massachusetts",
+      "holder": "Cesar Castro",
+      "expires_on": "2027-05-01",
+      "published": true,
+      "sort_order": 0
+    }
+  ],
+  "social_links": [
+    {
+      "label": "Facebook",
+      "platform": "facebook",
+      "url": "https://www.facebook.com/profile.php?id=100063587980405",
+      "published": true,
+      "sort_order": 0
+    },
+    {
+      "label": "Google Maps",
+      "platform": "google_maps",
+      "url": "https://share.google/bdsTKk9hdcNkZ2cTy",
+      "published": true,
+      "sort_order": 1
+    },
+    {
+      "label": "Google Reviews",
+      "platform": "google_reviews",
+      "url": "https://share.google/bdsTKk9hdcNkZ2cTy",
+      "published": true,
+      "sort_order": 2
+    }
+  ],
+  "brands": [
+    {
+      "name": "Trex",
+      "description": "Composite Decking",
+      "image_url": "",
+      "url": "",
+      "published": true,
+      "sort_order": 0
+    },
+    {
+      "name": "TimberTech",
+      "description": "Decking & Railing",
+      "image_url": "",
+      "url": "",
+      "published": true,
+      "sort_order": 1
+    },
+    {
+      "name": "GAF Timberline",
+      "description": "Roofing Shingles",
+      "image_url": "",
+      "url": "",
+      "published": true,
+      "sort_order": 2
+    },
+    {
+      "name": "Ply Gem",
+      "description": "Siding & Exteriors",
+      "image_url": "",
+      "url": "",
+      "published": true,
+      "sort_order": 3
+    }
+  ]
+}
