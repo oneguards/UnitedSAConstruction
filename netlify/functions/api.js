@@ -1,8 +1,8 @@
 const { createClient } = require('@supabase/supabase-js');
 const URL=process.env.SUPABASE_URL, ANON=process.env.SUPABASE_ANON_KEY, SECRET=process.env.SUPABASE_SERVICE_ROLE_KEY;
 const json=(status,data)=>({statusCode:status,headers:{'Content-Type':'application/json','Cache-Control':'no-store','Access-Control-Allow-Origin':'same-origin'},body:JSON.stringify(data)});
-const collections=['projects','services','social_links','licenses','brands'];
-const fields={projects:['title','description','service','location','image_url','image_urls','completed_on','published','sort_order'],services:['name','description','image_url','show_card','published','sort_order'],social_links:['label','platform','url','published','sort_order'],brands:['name','description','image_url','url','published','sort_order'],licenses:['license_number','license_type','state','holder','expires_on','published','sort_order']};
+const collections=['projects','services','social_links','licenses','brands','promotions'];
+const fields={promotions:['title','description','placement','button_label','url','published','sort_order'],projects:['title','description','service','location','image_url','image_urls','completed_on','published','sort_order'],services:['name','description','image_url','show_card','published','sort_order'],social_links:['label','platform','url','published','sort_order'],brands:['name','description','image_url','url','published','sort_order'],licenses:['license_number','license_type','state','holder','expires_on','published','sort_order']};
 const clean=(name,data)=>Object.fromEntries(fields[name].filter(k=>Object.hasOwn(data,k)).map(k=>[k,data[k]]));
 exports.handler=async(event)=>{
  try {
@@ -59,6 +59,14 @@ exports.handler=async(event)=>{
   if(!collections.includes(name))return json(400,{error:'Invalid collection'});
   if(method==='POST'||method==='PATCH'){
     const payload=clean(name,body);
+    if(name==='promotions'){
+      for(const [key,max] of [['title',120],['description',600],['button_label',60]]){
+        if(Object.hasOwn(payload,key)&&(typeof payload[key]!=='string'||payload[key].length>max||(key==='title'&&!payload[key].trim())))return json(400,{error:'Enter a headline (120 characters max), message (600 max), and button label (60 max).'});
+      }
+      if(payload.placement&&!['banner','popup','both'].includes(payload.placement))return json(400,{error:'Choose banner, popup, or both.'});
+      if(Object.hasOwn(payload,'published')&&typeof payload.published!=='boolean')return json(400,{error:'Choose on or off.'});
+      if(payload.url){try{if(new globalThis.URL(payload.url).protocol!=='https:')throw Error();}catch{return json(400,{error:'Use a complete https:// button link.'});}}
+    }
     if(name==='projects'){
       if(payload.completed_on==='')payload.completed_on=null;
       if(payload.completed_on!=null&&!/^\d{4}-\d{2}-\d{2}$/.test(payload.completed_on))return json(400,{error:'Choose a valid completion date.'});
