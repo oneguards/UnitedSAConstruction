@@ -16,10 +16,10 @@ async function page(name,data=seed,fail=false){
  }
  let d=await page('our-work');assert.equal(d.window.document.querySelectorAll('#projects figure').length,6);assert.equal(d.window.document.querySelectorAll('#managed-projects').length,1);d.window.close();
  d=await page('contact');assert.equal(d.window.document.querySelectorAll('#service option').length,9);assert.match(d.window.document.querySelector('.license-credentials').textContent,/GC-42968/);d.window.close();
- const edited=structuredClone(seed);edited.services[0].name='Edited roofing';edited.projects[0].title='Edited project';edited.licenses[0].license_number='EDIT-1';edited.brands[0].name='Edited brand';edited.social_links[1].url='https://example.com/maps';edited.social_links[2].url='https://example.com/reviews';
+ const edited=structuredClone(seed);edited.services[0].name='Edited roofing';edited.projects[0].title='Edited project';edited.projects[0].image_urls=['https://example.com/cover.jpg','https://example.com/detail.jpg'];edited.projects[0].image_url='https://example.com/cover.jpg';edited.projects[0].completed_on='2026-10-01';edited.licenses[0].license_number='EDIT-1';edited.brands[0].name='Edited brand';edited.social_links[1].url='https://example.com/maps';edited.social_links[2].url='https://example.com/reviews';
  d=await page('index',edited);assert.match(d.window.document.querySelector('#cards h3').textContent,/Edited roofing/);assert.match(d.window.document.querySelector('.brand-tile').textContent,/Edited brand/);assert.equal(d.window.document.querySelector('[data-social-platform="google_reviews"]').href,'https://example.com/reviews');d.window.close();
  d=await page('contact',edited);assert.match(d.window.document.querySelector('.license-credentials').textContent,/EDIT-1/);assert.equal(d.window.document.querySelector('[data-social-platform="google_maps"]').href,'https://example.com/maps');d.window.close();
- d=await page('our-work',edited);assert.match(d.window.document.querySelector('#projects figcaption').textContent,/Edited project/);d.window.close();
+ d=await page('our-work',edited);assert.match(d.window.document.querySelector('#projects figcaption').textContent,/Edited project/);assert.equal(d.window.document.querySelectorAll('.project-photos a').length,2);assert.equal(d.window.document.querySelector('.project-date').dateTime,'2026-10-01');d.window.close();
  const empty={services:[],projects:[],licenses:[],social_links:[],brands:[]};
  d=await page('index',empty);assert.equal(d.window.document.querySelectorAll('#cards article').length,0);assert.equal(d.window.document.querySelectorAll('.brand-tile').length,0);assert(d.window.document.querySelector('[data-social-platform]').hidden);assert.equal(d.window.document.querySelectorAll('footer .social-links a').length,0);d.window.close();
  d=await page('contact',empty);assert(d.window.document.querySelector('.license-credentials').hidden);assert.equal(d.window.document.querySelectorAll('#service option').length,1);d.window.close();
@@ -29,26 +29,36 @@ async function page(name,data=seed,fail=false){
  const admin=new JSDOM(fs.readFileSync(root+'admin/index.html','utf8'),{url:'https://unitedsaconstruction.com/admin/',runScripts:'outside-only'});const w=admin.window;
  w.UNITED_ADMIN_CONFIG={supabaseUrl:'https://example.supabase.co',supabaseAnonKey:'public-test'};w.HTMLElement.prototype.scrollIntoView=()=>{};
  w.supabase={createClient:()=>({auth:{getSession:async()=>({data:{session:{access_token:'test-session'}}}),onAuthStateChange:()=>{}}})};
- let saved;w.fetch=async(url,options)=>{const collection=new URL(url,'https://example.com').searchParams.get('collection');if(options.method==='PATCH')saved=JSON.parse(options.body);return {ok:true,json:async()=>({items:(seed[collection]||[]).map((x,i)=>({...x,id:'test-'+i}))})}};
+ let uploaded=0;w.supabase.createClient=()=>({auth:{getSession:async()=>({data:{session:{access_token:'test-session'}}}),onAuthStateChange:()=>{}},storage:{from:()=>({uploadToSignedUrl:async()=>{uploaded++;return {error:null}}})}});let saved;w.fetch=async(url,options)=>{const collection=new URL(url,'https://example.com').searchParams.get('collection');if(options.method==='PATCH')saved=JSON.parse(options.body);if(collection==='upload')return {ok:true,json:async()=>({path:'owner/photo.jpg',token:'test-upload-token',public_url:'https://example.com/upload-'+uploaded+'.jpg'})};return {ok:true,json:async()=>({items:(seed[collection]||[]).map((x,i)=>({...x,id:'test-'+i}))})}};
  w.eval(fs.readFileSync(root+'admin/admin.js','utf8'));await tick();
  for(const collection of ['services','projects','social_links','licenses','brands']){
   w.document.querySelector('[data-tab="'+collection+'"]').click();await tick();
   assert.equal(w.document.querySelectorAll('#panel article').length,seed[collection].length);
   [...w.document.querySelectorAll('#panel button')].find(x=>x.textContent==='Edit').click();
   const form=w.document.getElementById('editor');assert(form);
+  if(collection==='projects'){const upload=form.querySelector('input[type=file]');Object.defineProperty(upload,'files',{value:[new w.File(['one'],'one.jpg',{type:'image/jpeg'}),new w.File(['two'],'two.png',{type:'image/png'})]});await upload.onchange();assert.equal(uploaded,2);form.querySelector('input[name=completed_on]').value='2026-10-01';}
   if(collection==='licenses')form.querySelector('input[type=date]').value='';
   await form.onsubmit({preventDefault(){}});await tick();
-  assert.equal(saved.id,'test-0');if(collection==='licenses')assert.equal(saved.expires_on,null);
+  assert.equal(saved.id,'test-0');if(collection==='projects'){assert.equal(saved.image_urls.length,3);assert.equal(saved.completed_on,'2026-10-01');}if(collection==='licenses')assert.equal(saved.expires_on,null);
  }
  admin.window.close();console.log('Admin dashboard: existing records and edit/save across all five collections passed');
  // Verify real API authorization and brand field handling with mocked transport.
  let allowed=true,captured;const query={select(){return this},eq(){return this},order(){return Promise.resolve({data:seed.brands})},maybeSingle:async()=>({data:allowed?{user_id:'owner'}:null}),insert(payload){captured=payload;return this},single:async()=>({data:captured})};
- const sandbox={exports:{},process:{env:{SUPABASE_URL:'url',SUPABASE_ANON_KEY:'anon',SUPABASE_SERVICE_ROLE_KEY:'secret'}},require:()=>({createClient:()=>({from:()=>query,auth:{getUser:async()=>({data:{user:{id:'owner'}}})}})})};
+ const sandbox={exports:{},process:{env:{SUPABASE_URL:'url',SUPABASE_ANON_KEY:'anon',SUPABASE_SERVICE_ROLE_KEY:'secret'}},require:name=>name==='node:crypto'?require('node:crypto'):({createClient:()=>({from:()=>query,storage:{from:()=>({createSignedUploadUrl:async path=>({data:{token:'test-upload-token'}}),getPublicUrl:path=>({data:{publicUrl:'https://example.com/'+path}})})},auth:{getUser:async()=>({data:{user:{id:'owner'}}})}})})};
  vm.runInNewContext(fs.readFileSync(root+'netlify/functions/api.js','utf8'),sandbox);
  const event={httpMethod:'POST',queryStringParameters:{collection:'brands'},headers:{authorization:'Bearer test'},body:JSON.stringify({name:'New brand',image_url:'https://example.com/logo.png',published:true,unexpected:'blocked'})};
  let result=await sandbox.exports.handler({...event,headers:{}});assert.equal(result.statusCode,401);
  allowed=false;result=await sandbox.exports.handler(event);assert.equal(result.statusCode,403);
  allowed=true;result=await sandbox.exports.handler(event);assert.equal(result.statusCode,200);assert.equal(captured.unexpected,undefined);
  result=await sandbox.exports.handler({...event,body:JSON.stringify({name:'Bad',url:'javascript:alert(1)'})});assert.equal(result.statusCode,400);
- console.log('Backend: admin-only brand writes, field allowlist and unsafe URL rejection passed');
+ result=await sandbox.exports.handler({...event,queryStringParameters:{collection:'projects'},body:JSON.stringify({title:'Gallery',image_urls:['https://example.com/a.jpg','https://example.com/b.jpg'],completed_on:'2026-10-01'})});assert.equal(result.statusCode,200);assert.equal(captured.image_url,'https://example.com/a.jpg');assert.equal(captured.image_urls.length,2);
+ result=await sandbox.exports.handler({...event,queryStringParameters:{collection:'projects'},body:JSON.stringify({image_urls:Array(31).fill('https://example.com/a.jpg')})});assert.equal(result.statusCode,400);
+ result=await sandbox.exports.handler({...event,queryStringParameters:{collection:'projects'},body:JSON.stringify({image_urls:['javascript:bad']})});assert.equal(result.statusCode,400);
+ const uploadEvent={...event,queryStringParameters:{collection:'upload'},body:JSON.stringify({content_type:'image/jpeg',size:1024})};
+ result=await sandbox.exports.handler({...uploadEvent,headers:{}});assert.equal(result.statusCode,401);
+ allowed=false;result=await sandbox.exports.handler(uploadEvent);assert.equal(result.statusCode,403);allowed=true;
+ result=await sandbox.exports.handler(uploadEvent);assert.equal(result.statusCode,200);assert.match(JSON.parse(result.body).public_url,/https:\/\/example.com\/owner\//);
+ result=await sandbox.exports.handler({...uploadEvent,body:JSON.stringify({content_type:'image/svg+xml',size:1024})});assert.equal(result.statusCode,400);
+ result=await sandbox.exports.handler({...uploadEvent,body:JSON.stringify({content_type:'image/jpeg',size:10485761})});assert.equal(result.statusCode,400);
+ console.log('Backend: admin authorization, brand writes, gallery limits, cover synchronization, signed uploads and unsafe file rejection passed');
 })().catch(error=>{console.error(error);process.exitCode=1});
