@@ -11,6 +11,20 @@ exports.handler=async(event)=>{
   const method=event.httpMethod;
   const path=(event.path||'').split('/').filter(Boolean);
   const name=event.queryStringParameters?.collection||'';
+  if(method==='POST'&&event.queryStringParameters?.track==='1'){
+    const headers=Object.fromEntries(Object.entries(event.headers||{}).map(([k,v])=>[k.toLowerCase(),v]));
+    if(!['https://unitedsaconstruction.com','https://www.unitedsaconstruction.com'].includes(headers.origin))return json(403,{error:'Invalid origin'});
+    if(headers.dnt==='1'||headers['sec-gpc']==='1'||/bot|crawler|spider|headless|lighthouse/i.test(headers['user-agent']||''))return json(200,{ok:true});
+    if((event.body||'').length>1500)return json(400,{error:'Invalid page view'});
+    let input;try{input=JSON.parse(event.body||'{}');}catch{return json(400,{error:'Invalid page view'});}
+    const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if(!input||!uuid.test(input.id)||!uuid.test(input.session_id)||!['/','/services','/storm-damage','/our-work','/about','/contact'].includes(input.path)||!['Mobile','Tablet','Desktop'].includes(input.device))return json(400,{error:'Invalid page view'});
+    let source='Direct / unknown';
+    if(typeof input.referrer==='string'&&input.referrer.length<=253&&/^(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,63}$/i.test(input.referrer))source=input.referrer.toLowerCase();
+    const {error}=await db.from('website_page_views').insert({id:input.id,session_id:input.session_id,path:input.path,device:input.device,referrer:source});
+    // Retries with the same event ID count only once.
+    return error&&error.code!=='23505'?json(503,{error:'Tracking unavailable'}):json(200,{ok:true});
+  }
   if(method==='GET'&&event.queryStringParameters?.public==='1'){
     if(!collections.includes(name))return json(400,{error:'Invalid collection'});
     const {data,error}=await db.from(name).select('*').eq('published',true).order('sort_order',{ascending:true});
@@ -32,6 +46,12 @@ exports.handler=async(event)=>{
   if(authError||!user)return json(401,{error:'Invalid session'});
   const {data:allowed}=await db.from('admin_users').select('user_id').eq('user_id',user.id).maybeSingle();
   if(!allowed)return json(403,{error:'Not an authorized website administrator'});
+  if(method==='GET'&&name==='reports'){
+    const days=Number(event.queryStringParameters?.days||30);
+    if(![7,30,90].includes(days))return json(400,{error:'Choose 7, 30, or 90 days.'});
+    const {data,error}=await db.rpc('website_report',{report_days:days});
+    return error?json(500,{error:'Reports could not be loaded.'}):json(200,{report:data});
+  }
   if(method==='GET'&&name==='leads'){
     const {data,error}=await db.from('leads').select('*').order('created_at',{ascending:false}).limit(500);
     return error?json(500,{error:error.message}):json(200,{items:data});
