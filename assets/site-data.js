@@ -89,25 +89,7 @@
       }
     });
   };
-  const renderProjects = projects => {
-    const container = document.getElementById('managed-projects');
-    if (!container) return;
-    container.replaceChildren(...projects.map(x => {
-      const fig = node('figure');
-      const photos = [...new Set([...(Array.isArray(x.image_urls) ? x.image_urls : []),x.image_url].filter(safeUrl))];
-      const img = image(photos[0],x.title);
-      if (img) { const a = external(photos[0]); a.append(img); fig.append(a); }
-      if (photos.length > 1) {
-        const gallery = node('div',null,'project-photos'); gallery.setAttribute('aria-label','Photos of '+x.title);
-        photos.forEach((url,index) => { const a = external(url); a.setAttribute('aria-label',x.title+' — photo '+(index+1)); const thumbnail = image(url,x.title+' — photo '+(index+1)); a.append(thumbnail); gallery.append(a); });
-        fig.append(gallery);
-      }
-      fig.append(node('figcaption',x.title+(x.location ? ' · '+x.location : '')));
-      if (x.completed_on) { const date = new Date(x.completed_on+'T12:00:00Z'); if (!Number.isNaN(date.getTime())) { const time = node('time','Completed '+date.toLocaleDateString(undefined,{month:'long',day:'numeric',year:'numeric',timeZone:'UTC'}),'project-date'); time.dateTime=x.completed_on; fig.append(time); } }
-      if (x.description) fig.append(node('p',x.description,'project-description'));
-      return fig;
-    }));
-  };
+  const renderProjects = projects => { window.UnitedPortfolio?.render(projects); };
   const renderBrands = brands => {
     document.querySelectorAll('.brand-list').forEach(container => {
       container.replaceChildren(...brands.map(x => {
