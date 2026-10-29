@@ -62,14 +62,17 @@ exports.handler=async(event)=>{
   }
   const body=JSON.parse(event.body||'{}');
   if(name==='upload'&&method==='POST'){
+    const target=body.collection??'projects';
+    if(!['projects','services'].includes(target))return json(400,{error:'Choose a project or service photo upload.'});
+    const bucketName=target==='services'?'service-photos':'project-photos';
     const types={'image/jpeg':'jpg','image/png':'png','image/webp':'webp','image/avif':'avif'};
     if(!Object.hasOwn(types,body.content_type)||!Number.isInteger(body.size)||body.size<1||body.size>10485760)return json(400,{error:'Choose a JPG, PNG, WebP, or AVIF image up to 10 MB.'});
     const objectPath=user.id+'/'+require('node:crypto').randomUUID()+'.'+types[body.content_type];
-    const bucket=db.storage.from('project-photos');
+    const bucket=db.storage.from(bucketName);
     const {data,error}=await bucket.createSignedUploadUrl(objectPath);
     if(error)return json(500,{error:'Photo upload could not be prepared. Please try again.'});
     const {data:publicData}=bucket.getPublicUrl(objectPath);
-    return json(200,{path:objectPath,token:data.token,public_url:publicData.publicUrl});
+    return json(200,{bucket:bucketName,path:objectPath,token:data.token,public_url:publicData.publicUrl});
   }
   if(name==='leads'&&method==='PATCH'){
     if(!body.id||!['new','contacted','quoted','won','lost'].includes(body.status))return json(400,{error:'Invalid status'});

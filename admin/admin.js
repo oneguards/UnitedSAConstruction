@@ -96,7 +96,7 @@ function edit(item){
   closeEditor();previousFocus=document.activeElement;const editingTab=tab;const form=el('form');form.id='editor';const head=el('div',null,'editor-header'),titleWrap=el('div');titleWrap.append(el('span',sections[tab].title.toUpperCase(),'eyebrow'));const title=el('h2',(item?'Edit ':'New ')+sections[tab].singular);title.id='editor-title';titleWrap.append(title);const close=el('button','×','close-editor');close.type='button';close.setAttribute('aria-label','Close editor');close.onclick=closeEditor;head.append(titleWrap,close);form.append(head);
   const fields=el('div',null,'editor-fields'),inputs={};const required={promotions:['title'],projects:['title'],services:['name'],social_links:['label','url'],licenses:['license_number'],brands:['name']};
   for(const key of columns[tab]){
-    const wide=['title','name','description','image_url','url','license_type'].includes(key);const label=el('label',(tab==='promotions'&&key==='title'?'Offer headline':tab==='promotions'&&key==='published'?'Promotion turned on':labels[key]||key),'field'+(wide?' wide':'')+(['published','show_card'].includes(key)?' toggle':''));let input;
+    const wide=['title','name','description','image_url','url','license_type'].includes(key);const label=el('label',(tab==='services'&&key==='image_url'?'Photo link (optional)':tab==='promotions'&&key==='title'?'Offer headline':tab==='promotions'&&key==='published'?'Promotion turned on':labels[key]||key),'field'+(wide?' wide':'')+(['published','show_card'].includes(key)?' toggle':''));let input;
     if(key==='placement'){input=el('select');for(const [value,text] of [['banner','Homepage top banner'],['popup','Homepage popup'],['both','Banner and popup']])input.add(new Option(text,value));input.value=item?.[key]||'banner';}
     else if(key==='platform'){input=el('select');for(const value of ['custom','facebook','google_maps','google_reviews'])input.add(new Option(value.replaceAll('_',' '),value));input.value=item?.[key]||'custom';}
     else if(key==='description'){input=el('textarea');input.value=item?.[key]||'';input.placeholder=tab==='projects'?'A short story about the work, materials, and finished result.':'A little detail goes a long way.';input.maxLength=5000;}
@@ -105,6 +105,27 @@ function edit(item){
   }
   const footer=el('div',null,'editor-footer'),cancel=el('button','Cancel','secondary'),save=el('button','Save changes','primary');cancel.type='button';cancel.onclick=closeEditor;save.type='submit';footer.append(cancel,save);const errorEl=el('p',null,'editor-error');errorEl.setAttribute('role','alert');errorEl.hidden=true;
   let photos=editingTab==='projects'?photosFor(item||{}):[],uploading=false;
+  if(editingTab==='services'){
+    const photoEditor=el('section',null,'photo-editor service-photo-editor');photoEditor.setAttribute('aria-label','Service photo');
+    photoEditor.append(el('h3','Service photo'),el('p','Your current photo stays until you upload a replacement and save. Choose a photo from your phone or computer. JPG, PNG, WebP, or AVIF · up to 10 MB.'));
+    const preview=el('img',null,'service-photo-preview'),empty=el('p','No photo selected yet.','service-photo-empty');preview.alt='Current service photo';
+    const zone=el('label',null,'upload-zone');zone.append(el('span','↑'),el('strong','Choose a service photo'),el('small','Select one image from your device'));const upload=el('input');upload.type='file';upload.accept='image/jpeg,image/png,image/webp,image/avif';upload.setAttribute('aria-label','Upload service photo');zone.append(upload);
+    const progress=el('p',null,'upload-status');progress.setAttribute('aria-live','polite');
+    const updatePreview=()=>{const url=safeUrl(inputs.image_url.value);preview.hidden=!url;empty.hidden=!!url;if(url)preview.src=url;else preview.removeAttribute('src');};
+    inputs.image_url.addEventListener('input',updatePreview);
+    upload.onchange=async()=>{
+      const file=upload.files?.[0];if(!file)return;
+      if(!['image/jpeg','image/png','image/webp','image/avif'].includes(file.type)||file.size<1||file.size>10485760){progress.textContent='Choose a JPG, PNG, WebP, or AVIF image, up to 10 MB. Your current photo has been kept.';upload.value='';return;}
+      uploading=true;save.disabled=true;upload.disabled=true;inputs.image_url.disabled=true;progress.textContent='Uploading your service photo…';
+      try{
+        const signed=await api('upload','POST',{collection:'services',content_type:file.type,size:file.size});
+        const {error}=await client.storage.from('service-photos').uploadToSignedUrl(signed.path,signed.token,file,{contentType:file.type});if(error)throw error;
+        inputs.image_url.value=signed.public_url;updatePreview();progress.textContent='Photo uploaded. Save changes to use it on your website.';
+      }catch(error){progress.textContent='Upload stopped: '+error.message+' Your current photo has been kept.';}
+      finally{uploading=false;save.disabled=false;upload.disabled=false;inputs.image_url.disabled=false;upload.value='';}
+    };
+    photoEditor.append(preview,empty,zone,progress);fields.prepend(photoEditor);updatePreview();
+  }
   if(editingTab==='projects'){
     const photoEditor=el('div',null,'photo-editor');photoEditor.append(el('h3','Project photos'),el('p','Upload up to 30 photos. The cover photo appears first on your website. JPG, PNG, WebP, or AVIF · up to 10 MB each.'));
     const zone=el('label',null,'upload-zone');zone.append(el('span','↑'),el('strong','Choose photos from your device'),el('small','Select multiple images at once'));const upload=el('input');upload.type='file';upload.multiple=true;upload.accept='image/jpeg,image/png,image/webp,image/avif';upload.setAttribute('aria-label','Upload project photos');zone.append(upload);

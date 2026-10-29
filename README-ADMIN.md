@@ -63,3 +63,12 @@ Traffic collection starts after deployment, without importing historical Netlify
 The public ingestion route accepts only known page paths, validated UUIDs, coarse device types, and a referral hostname. It checks the production Origin, ignores common bots/privacy headers, and deduplicates repeated event IDs. This is approximate browser analytics: Origin headers and IDs can be forged by non-browser clients, so this is not a fraud-resistant visitor counter. Each page view consumes a Netlify function request and a database insert. No third-party analytics service is added. Network/hosting logs are governed separately by Netlify and Supabase.
 
 `supabase/reports.sql` configures the RLS-protected event table and a service-only, security-invoker aggregate function. Reports require the same verified admin authorization as content editing. No direct browser reads/writes are granted. Report windows cover up to 90 days; event rows currently remain stored beyond that (no automatic deletion job). The reporting feature and data collection begin only when this PR is merged/deployed.
+
+
+### Service photo uploads
+
+Open **Services → Edit** (or **Add service**) and choose **Choose a service photo** from your phone or computer. The editor previews the existing image first. Upload a JPG, PNG, WebP, or AVIF image up to 10 MB, then **Save changes**. Each service has one card photo. The saved image appears on both Home and Services. You can also paste a complete HTTPS photo link in **Photo link (optional)**.
+
+Opening/saving a service without replacing the photo preserves the original URL. Upload errors keep the current image. Cancelling the editor keeps the published service unchanged. Uploaded files are not deleted when a link is replaced or cleared; the original website assets remain intact. No existing service records or images are replaced by setup.
+
+`supabase/service-photos.sql` adds the public website-image bucket with a 10 MB limit and approved image types. Upload signatures require a verified administrator; direct browser Storage writes are not enabled. The upload endpoint accepts only projects/services as targets. Project gallery uploads continue using their existing bucket. For iPhone HEIC photos, export/share as JPEG before uploading.
